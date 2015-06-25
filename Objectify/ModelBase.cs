@@ -58,10 +58,9 @@ namespace Objectify
             Expression<Func<TItem, T>> ownerGetter)
             where TItem : ModelBase<TItem>
         {
-            var itemPropertyName = ownerGetter.PropertyName();
             var getCollection = collectionGetter.Compile();
 
-            ModelBase<TItem>.ChangeHandlers[itemPropertyName] += (item, oldOwner, newOwner) =>
+            ModelBase<TItem>.ChangeHandlers[ownerGetter.PropertyName()] += (item, oldOwner, newOwner) =>
             {
                 if (oldOwner != null)
                 {
@@ -86,9 +85,38 @@ namespace Objectify
             };
         }
 
-        protected static void OneToOne<TItem>(Expression<Func<T, TItem>> f1, Expression<Func<TItem, T>> f2)
+        protected static void OneToOne<TItem>(Expression<Func<T, TItem>> firstReferenceGetter, Expression<Func<TItem, T>> secondReferenceGetter)
             where TItem : ModelBase<TItem>
         {
+            var setSecondReference = secondReferenceGetter.ToSetter();
+            ChangeHandlers[firstReferenceGetter.PropertyName()] += (owner, oldObject, newObject) =>
+            {
+                if (ReferenceEquals(oldObject, newObject)) return;
+
+                if (oldObject != null)
+                {
+                    setSecondReference((TItem) oldObject, null);
+                }
+                if (newObject != null)
+                {
+                    setSecondReference((TItem) newObject, owner);
+                }
+            };
+
+            var setFirstReference = firstReferenceGetter.ToSetter();
+            ModelBase<TItem>.ChangeHandlers[secondReferenceGetter.PropertyName()] += (owner, oldObject, newObject) =>
+            {
+                if (ReferenceEquals(oldObject, newObject)) return;
+
+                if (oldObject != null)
+                {
+                    setFirstReference((T) oldObject, null);
+                }
+                if (newObject != null)
+                {
+                    setFirstReference((T) newObject, owner);
+                }
+            };
         }
 
         protected static void ManyToMany<TItem>(Expression<Func<T, ICollection<TItem>>> firstCollectionGetter,

@@ -9,6 +9,7 @@ namespace Tests.TestModel
         public string Description { get; set; }
         public User Author { get; set; }
         public ICollection<Tag> Tags { get; set; }
+        public Topic Topic { get; set; }
 
         static Blog()
         {
