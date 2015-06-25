@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -16,6 +17,7 @@ namespace Objectify
         public delegate void PropertyChangeHandler(T changingObject, object oldValue, object newValue);
 
         private static readonly DictionaryWithDefault<string, PropertyChangeHandler> ChangeHandlers;
+        private static Action<T> _onModelConstructed = delegate { };
         private static readonly Repository<T> Repository;
         public event PropertyChangedEventHandler PropertyChanged = delegate { };
         public int Id { get; private set; }
@@ -29,7 +31,8 @@ namespace Objectify
         protected ModelBase()
         {
             Id = Repository.NextId();
-            Repository.Add((T)this);
+            Repository.Add((T) this);
+            _onModelConstructed((T) this);
         }
 
         public static T ById(int id)
@@ -57,36 +60,27 @@ namespace Objectify
         {
             var itemPropertyName = ownerGetter.PropertyName();
             var getCollection = collectionGetter.Compile();
-            Func<object, ManyCollectionWrapper<TItem>> getCollectionWrapper =
-                x => (ManyCollectionWrapper<TItem>) getCollection((T) x);
 
             ModelBase<TItem>.ChangeHandlers[itemPropertyName] += (item, oldOwner, newOwner) =>
             {
                 if (oldOwner != null)
                 {
-                    getCollectionWrapper(oldOwner).DirtyRemove(item);
+                    getCollection((T) oldOwner).Remove(item);
                 }
                 if (newOwner != null)
                 {
-                    getCollectionWrapper(newOwner).DirtyAdd(item);
+                    getCollection((T) newOwner).Add(item);
                 }
             };
 
             var setCollection = collectionGetter.ToSetter();
             var setOwner = ownerGetter.ToSetter();
 
-            ChangeHandlers[collectionGetter.PropertyName()] += (owner, oldCollection, newCollection) =>
+            _onModelConstructed += owner =>
             {
-                if (newCollection is ManyCollectionWrapper<TItem>)
-                    return;
-
-                if (oldCollection != null)
-                {
-                    throw new ArgumentException("Collections reference can't be changed after being initialized.");
-                }
-
-                var collection = new ManyCollectionWrapper<TItem>((ICollection<TItem>) newCollection,
-                    item => setOwner(item, owner), item => setOwner(item, null));
+                var collection = new ManyCollectionWrapper<TItem>(new List<TItem>());
+                collection.OnItemAdded += item => setOwner(item, owner);
+                collection.OnItemRemoved += item => setOwner(item, null);
 
                 setCollection(owner, collection);
             };
@@ -98,10 +92,30 @@ namespace Objectify
         }
 
         protected static void ManyToMany<TItem>(Expression<Func<T, ICollection<TItem>>> firstCollectionGetter,
-            Expression<Func<ICollection<TItem>, T>> secondCollectionGetter)
+            Expression<Func<TItem, ICollection<T>>> secondCollectionGetter)
             where TItem : ModelBase<TItem>
         {
+            var setFistCollection = firstCollectionGetter.ToSetter();
+            var getSecondCollection = secondCollectionGetter.Compile();
+            
+            _onModelConstructed += owner =>
+            {
+                var collection = new ManyCollectionWrapper<TItem>(new List<TItem>());
+                setFistCollection(owner, collection);
+                collection.OnItemAdded += item => getSecondCollection(item).Add(owner);
+                collection.OnItemRemoved += item => getSecondCollection(item).Remove(owner);
+            };
 
+            var setSecondCollection = secondCollectionGetter.ToSetter();
+            var getFirstCollection = firstCollectionGetter.Compile();
+
+            ModelBase<TItem>._onModelConstructed += owner =>
+            {
+                var collection = new ManyCollectionWrapper<T>(new List<T>());
+                setSecondCollection(owner, collection);
+                collection.OnItemAdded += item => getFirstCollection(item).Add(owner);
+                collection.OnItemRemoved += item => getFirstCollection(item).Remove(owner);
+            };
         } 
     }
 }

@@ -24,8 +24,6 @@ namespace Tests.TestModel
             Name = name;
             LastName = lastName;
             Age = age;
-            Blogs = new List<Blog>();
-            Themes = new List<Theme>();
         }
     }
 }

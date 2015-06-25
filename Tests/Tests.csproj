@@ -58,10 +58,12 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="ManyToManyTests.cs" />
     <Compile Include="Playground.cs" />
     <Compile Include="TestModel\Blog.cs" />
     <Compile Include="ManyToOneTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestModel\Tag.cs" />
     <Compile Include="TestModel\Theme.cs" />
     <Compile Include="TestModel\User.cs" />
   </ItemGroup>

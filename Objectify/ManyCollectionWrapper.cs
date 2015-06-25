@@ -9,77 +9,78 @@ namespace Objectify
 {
     class ManyCollectionWrapper<T> : ICollection<T>
     {
-        private readonly ICollection<T> _wrappedCollection;
-        private readonly Action<T> _onItemAdded;
-        private readonly Action<T> _onItemRemoved;
+        public ICollection<T> WrappedCollection { get; set; }
+        public event Action<T> OnItemAdded = delegate { };
+        public event Action<T> OnItemRemoved = delegate { }; 
 
-        public ManyCollectionWrapper(ICollection<T> wrappedCollection, Action<T> onItemAdded, Action<T> onItemRemoved)
+        public ManyCollectionWrapper(ICollection<T> wrappedCollection)
         {
-            _wrappedCollection = wrappedCollection;
-            _onItemAdded = onItemAdded;
-            _onItemRemoved = onItemRemoved;
+            WrappedCollection = wrappedCollection;
         }
 
-        public void DirtyAdd(T item)
+        public bool DirtyAdd(T item)
         {
             if (Contains(item))
             {
-                return;
+                return false;
             }
-            _wrappedCollection.Add(item);
+            WrappedCollection.Add(item);
+            return true;
         }
 
         public void DirtyRemove(T item)
         {
-            _wrappedCollection.Remove(item);
+            WrappedCollection.Remove(item);
         }
 
         public void Add(T item)
         {
-            DirtyAdd(item);
-            _onItemAdded(item);
+            if (DirtyAdd(item))
+            {
+                OnItemAdded(item);
+            }
         }
 
         public bool Remove(T item)
         {
-            var isRemoved = _wrappedCollection.Remove(item);
+            var isRemoved = WrappedCollection.Remove(item);
             if (isRemoved)
             {
-                _onItemRemoved(item);
+                OnItemRemoved(item);
             }
             return isRemoved;
         }
 
         public void Clear()
         {
-            var items = _wrappedCollection.ToList();
-            _wrappedCollection.Clear();
-            items.ForEach(_onItemRemoved);
+            var items = WrappedCollection.ToList();
+            WrappedCollection.Clear();
+            items.ForEach(OnItemRemoved ?? delegate { });
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return _wrappedCollection.GetEnumerator();
+            return WrappedCollection.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return _wrappedCollection.GetEnumerator();
+            return WrappedCollection.GetEnumerator();
         }
 
         public bool Contains(T item)
         {
-            return _wrappedCollection.Contains(item);
+            return WrappedCollection.Contains(item);
         }
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            _wrappedCollection.CopyTo(array, arrayIndex);
+            WrappedCollection.CopyTo(array, arrayIndex);
         }
 
         public int Count
         {
-            get { return _wrappedCollection.Count; }
+            get { return WrappedCollection.Count; }
         }
 
         public bool IsReadOnly
