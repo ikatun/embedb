@@ -72,23 +72,24 @@ namespace Objectify
                 }
             };
 
-            ChangeHandlers[collectionGetter.PropertyName()] +=
-                (owner, old, @new) => WrapCollection(owner, collectionGetter.ToSetter(), old, @new, ownerGetter.ToSetter());
-        }
+            var setCollection = collectionGetter.ToSetter();
+            var setOwner = ownerGetter.ToSetter();
 
-        private static void WrapCollection<TItem>(T owner, Action<T, ICollection<TItem>> setCollection, object old, object @new, Action<TItem, T> setOwner)
-        {
-            if (@new is ManyCollectionWrapper<TItem>)
-                return;
-
-            if (old != null)
+            ChangeHandlers[collectionGetter.PropertyName()] += (owner, oldCollection, newCollection) =>
             {
-                throw new ArgumentException("Collections reference can't be changed after being initialized.");
-            }
+                if (newCollection is ManyCollectionWrapper<TItem>)
+                    return;
 
-            var collection = new ManyCollectionWrapper<TItem>((ICollection<TItem>)@new, item => setOwner(item, owner), item => setOwner(item, null));
+                if (oldCollection != null)
+                {
+                    throw new ArgumentException("Collections reference can't be changed after being initialized.");
+                }
 
-            setCollection(owner, collection);
+                var collection = new ManyCollectionWrapper<TItem>((ICollection<TItem>) newCollection,
+                    item => setOwner(item, owner), item => setOwner(item, null));
+
+                setCollection(owner, collection);
+            };
         }
 
         protected static void OneToOne<TItem>(Expression<Func<T, TItem>> f1, Expression<Func<TItem, T>> f2)
@@ -96,8 +97,8 @@ namespace Objectify
         {
         }
 
-        protected static void ManyToMany<TItem>(Expression<Func<T, ICollection<TItem>>> f1,
-            Expression<Func<ICollection<TItem>, T>> f2)
+        protected static void ManyToMany<TItem>(Expression<Func<T, ICollection<TItem>>> firstCollectionGetter,
+            Expression<Func<ICollection<TItem>, T>> secondCollectionGetter)
             where TItem : ModelBase<TItem>
         {
 
