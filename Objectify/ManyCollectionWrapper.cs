@@ -10,8 +10,8 @@ namespace Objectify
     class ManyCollectionWrapper<T> : ICollection<T>
     {
         private readonly ICollection<T> _wrappedCollection;
-        private readonly Action<T> _onItemAdded = delegate { };
-        private readonly Action<T> _onItemRemoved = delegate { }; 
+        private readonly Action<T> _onItemAdded;
+        private readonly Action<T> _onItemRemoved;
 
         public ManyCollectionWrapper(ICollection<T> wrappedCollection, Action<T> onItemAdded, Action<T> onItemRemoved)
         {
@@ -22,6 +22,10 @@ namespace Objectify
 
         public void DirtyAdd(T item)
         {
+            if (Contains(item))
+            {
+                return;
+            }
             _wrappedCollection.Add(item);
         }
 
@@ -32,12 +36,7 @@ namespace Objectify
 
         public void Add(T item)
         {
-            if (Contains(item))
-            {
-                return;
-            }
-
-            _wrappedCollection.Add(item);
+            DirtyAdd(item);
             _onItemAdded(item);
         }
 
