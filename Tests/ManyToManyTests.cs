@@ -20,6 +20,10 @@ namespace Tests
         private Tag tag3;
         private Tag tag4;
 
+        private User u1;
+        private User u2;
+        private User u3;
+
         [TestInitialize]
         public void Init()
         {
@@ -31,6 +35,10 @@ namespace Tests
             tag2 = new Tag("test tag 2");
             tag3 = new Tag("test tag 3");
             tag4 = new Tag("test tag 4");
+
+            u1 = new User("Ivo", "Katunarić", 25);
+            u2 = new User("Ivo", "Katunarić", 25);
+            u3 = new User("Ivo", "Katunarić", 25);
         }
 
         [TestMethod]
@@ -103,7 +111,18 @@ namespace Tests
             Assert.AreSame(tag1.Blogs.First(), blog1);
             Assert.AreSame(tag1.Blogs.Skip(1).First(), blog2);
             Assert.AreSame(tag1.Blogs.Skip(2).First(), blog3);
-            
+        }
+
+        [TestMethod]
+        public void AddFriend()
+        {
+            u1.Friends.Add(u2);
+
+            Assert.IsTrue(u1.Friends.Count == 1);
+            Assert.IsTrue(u2.Friends.Count == 1);
+
+            Assert.AreSame(u1.Friends.First(), u2);
+            Assert.AreSame(u2.Friends.First(), u1);
         }
     }
 }
